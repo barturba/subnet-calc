@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 
+	"github.com/c-robinson/iplib"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,56 +37,26 @@ func printNetworkAddress(address, network string) {
 	fmt.Printf("Total number of hosts: %d\n", totalNumberOfHosts(address, network))
 	fmt.Printf("Subnet mask: %s\n", subnetMask(network))
 	fmt.Printf("Wildcard mask: %s\n", wildcardMask(network))
-	fmt.Printf("Binary subnet mask: %s\n", binarySubnetMask(network))
-	fmt.Printf("IP class: %s\n", ipClass(address))
-	fmt.Printf("IP type: %s\n", ipType(address))
-	fmt.Printf("Short: %s\n", short(address))
-	fmt.Printf("Binary ID: %s\n", binaryID(address))
-	fmt.Printf("Integer ID: %d\n", integerID(address))
-	fmt.Printf("Hex ID: %s\n", hexID(address))
-	fmt.Printf("in-addr.arpa: %s\n", inAddrArpa(address))
-	fmt.Printf("ipv4 mapped address: %s\n", ipv4MappedAddress(address))
-	fmt.Printf("6to4 address: %s\n", sixToFourAddress(address))
 }
 
-func sixToFourAddress(address string) string {
-	panic("unimplemented")
+func networkAddress(address, network string) string {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := ipa.IP().String()
+	return output
 }
 
-func binaryID(address string) string {
-	panic("unimplemented")
-}
-
-func binarySubnetMask(network string) string {
-	panic("unimplemented")
-}
-
-func ipv4MappedAddress(address string) string {
-	panic("unimplemented")
-}
-
-func inAddrArpa(address string) string {
-	panic("unimplemented")
-}
-
-func hexID(address string) string {
-	panic("unimplemented")
-}
-
-func integerID(address string) int {
-	panic("unimplemented")
-}
-
-func short(address string) string {
-	panic("unimplemented")
-}
-
-func ipType(address string) string {
-	panic("unimplemented")
-}
-
-func ipClass(address string) string {
-	panic("unimplemented")
+func usableHostIPRange(address, network string) string {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := fmt.Sprintf("%v - %v", ipa.FirstAddress().String(), ipa.LastAddress().String())
+	return output
 }
 
 func wildcardMask(network string) string {
@@ -98,13 +72,5 @@ func totalNumberOfHosts(address, network string) int {
 }
 
 func broadcastAddress(address, network string) string {
-	panic("unimplemented")
-}
-
-func usableHostIPRange(address, network string) string {
-	panic("unimplemented")
-}
-
-func networkAddress(address, network string) string {
 	panic("unimplemented")
 }

@@ -2,7 +2,11 @@ module github.com/barturba/subnet-calc
 
 go 1.22.5
 
-require github.com/urfave/cli/v2 v2.27.2
+require (
+	github.com/c-robinson/iplib v1.0.8
+	github.com/google/go-cmp v0.6.0
+	github.com/urfave/cli/v2 v2.27.2
+)
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
