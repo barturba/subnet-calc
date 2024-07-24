@@ -32,7 +32,9 @@ func TestUseableHostIPRange(t *testing.T) {
 		want    string
 	}{
 		"248.192.215.107": {address: "248.192.215.107", network: "/30", want: "248.192.215.105 - 248.192.215.106"},
-		"38.73.20.159":    {address: "38.73.20.159", network: "/23", want: "38.73.20.1 - 38.73.21.254"}}
+		"38.73.20.159":    {address: "38.73.20.159", network: "/23", want: "38.73.20.1 - 38.73.21.254"},
+		"179.241.4.46":    {address: "179.241.4.46", network: "17", want: "179.241.0.1 - 179.241.127.254"},
+	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
