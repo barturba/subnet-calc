@@ -59,18 +59,30 @@ func usableHostIPRange(address, network string) string {
 	return output
 }
 
+func broadcastAddress(address, network string) string {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := ipa.BroadcastAddress().String()
+	return output
+}
+
+func totalNumberOfHosts(address, network string) uint32 {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := ipa.Count() + 2
+	return output
+}
+
 func wildcardMask(network string) string {
 	panic("unimplemented")
 }
 
 func subnetMask(network string) string {
-	panic("unimplemented")
-}
-
-func totalNumberOfHosts(address, network string) int {
-	panic("unimplemented")
-}
-
-func broadcastAddress(address, network string) string {
 	panic("unimplemented")
 }

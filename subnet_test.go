@@ -46,3 +46,41 @@ func TestUseableHostIPRange(t *testing.T) {
 		})
 	}
 }
+
+func TestBroadcastAddress(t *testing.T) {
+	tests := map[string]struct {
+		address string
+		network string
+		want    string
+	}{
+		"179.241.4.46": {address: "179.241.4.46", network: "/17", want: "179.241.127.255"}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := broadcastAddress(tc.address, tc.network)
+			diff := cmp.Diff(tc.want, got)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}
+
+func TestTotalNumberofHosts(t *testing.T) {
+	tests := map[string]struct {
+		address string
+		network string
+		want    uint32
+	}{
+		"179.241.4.46": {address: "179.241.4.46", network: "/30", want: 4}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := totalNumberOfHosts(tc.address, tc.network)
+			diff := cmp.Diff(tc.want, got)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}
