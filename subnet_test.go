@@ -84,3 +84,41 @@ func TestTotalNumberofHosts(t *testing.T) {
 		})
 	}
 }
+
+func TestNumberOfUsableHosts(t *testing.T) {
+	tests := map[string]struct {
+		address string
+		network string
+		want    uint32
+	}{
+		"179.241.4.46": {address: "179.241.4.46", network: "/30", want: 2}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := numberOfUsableHosts(tc.address, tc.network)
+			diff := cmp.Diff(tc.want, got)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}
+
+func TestSubnetMask(t *testing.T) {
+	tests := map[string]struct {
+		address string
+		network string
+		want    string
+	}{
+		"179.241.4.46": {address: "179.241.4.46", network: "/30", want: "255.255.255.252"}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := subnetMask(tc.address, tc.network)
+			diff := cmp.Diff(tc.want, got)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}

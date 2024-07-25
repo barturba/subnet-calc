@@ -35,7 +35,8 @@ func printNetworkAddress(address, network string) {
 	fmt.Printf("Usable host IP range: %s\n", usableHostIPRange(address, network))
 	fmt.Printf("Broadcast address: %s\n", broadcastAddress(address, network))
 	fmt.Printf("Total number of hosts: %d\n", totalNumberOfHosts(address, network))
-	fmt.Printf("Subnet mask: %s\n", subnetMask(network))
+	fmt.Printf("Number of useable hosts: %d\n", numberOfUsableHosts(address, network))
+	fmt.Printf("Subnet mask: %s\n", subnetMask(address, network))
 	fmt.Printf("Wildcard mask: %s\n", wildcardMask(network))
 }
 
@@ -79,10 +80,32 @@ func totalNumberOfHosts(address, network string) uint32 {
 	return output
 }
 
-func wildcardMask(network string) string {
-	panic("unimplemented")
+func numberOfUsableHosts(address, network string) uint32 {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := ipa.Count()
+	return output
 }
 
-func subnetMask(network string) string {
+func subnetMask(address, network string) string {
+	_, ipv4Net, err := net.ParseCIDR(fmt.Sprintf("%s%s", address, network))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ipv4MaskString(ipv4Net.Mask)
+}
+
+func ipv4MaskString(m []byte) string {
+	if len(m) != 4 {
+		panic("ipv4Mask: len must be 4 bytes")
+	}
+
+	return fmt.Sprintf("%d.%d.%d.%d", m[0], m[1], m[2], m[3])
+}
+
+func wildcardMask(network string) string {
 	panic("unimplemented")
 }
