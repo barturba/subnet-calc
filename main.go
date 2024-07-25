@@ -37,7 +37,7 @@ func printNetworkAddress(address, network string) {
 	fmt.Printf("Total number of hosts: %d\n", totalNumberOfHosts(address, network))
 	fmt.Printf("Number of useable hosts: %d\n", numberOfUsableHosts(address, network))
 	fmt.Printf("Subnet mask: %s\n", subnetMask(address, network))
-	fmt.Printf("Wildcard mask: %s\n", wildcardMask(network))
+	fmt.Printf("Wildcard mask: %s\n", wildcardMask(address, network))
 }
 
 func networkAddress(address, network string) string {
@@ -106,6 +106,12 @@ func ipv4MaskString(m []byte) string {
 	return fmt.Sprintf("%d.%d.%d.%d", m[0], m[1], m[2], m[3])
 }
 
-func wildcardMask(network string) string {
-	panic("unimplemented")
+func wildcardMask(address, network string) string {
+	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
+	output := ipa.Wildcard().String()
+	return output
 }
