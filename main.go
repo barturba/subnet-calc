@@ -18,10 +18,16 @@ func main() {
 		Usage: "calculated subnets",
 
 		Action: func(cCtx *cli.Context) error {
+			if cCtx.NArg() != 2 {
+				return fmt.Errorf("expected 2 arguments, got %d", cCtx.NArg())
+			}
+
 			printNetworkAddress(cCtx.Args().Get(0), cCtx.Args().Get(1))
 
 			return nil
 		},
+		ArgsUsage:   "IP_ADDRESS NETWORK",
+		Description: `This tool calculates the network address, usable host IP range, broadcast address, total number of hosts, number of usable hosts, subnet mask, and wildcard mask for a given IP address and network.`,
 	}
 
 	if err := app.Run(os.Args); err != nil {
