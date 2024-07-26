@@ -30,7 +30,6 @@ func main() {
 }
 
 func printNetworkAddress(address, network string) {
-	fmt.Printf("printNetworkAddress\n")
 	fmt.Printf("Network address: %s\n", networkAddress(address, network))
 	fmt.Printf("Usable host IP range: %s\n", usableHostIPRange(address, network))
 	fmt.Printf("Broadcast address: %s\n", broadcastAddress(address, network))
@@ -107,11 +106,19 @@ func ipv4MaskString(m []byte) string {
 }
 
 func wildcardMask(address, network string) string {
-	networkString, err := strconv.Atoi(strings.Replace(network, "/", "", 1))
+	_, ipv4Net, err := net.ParseCIDR(fmt.Sprintf("%s%s", address, network))
 	if err != nil {
 		log.Fatal(err)
 	}
-	ipa := iplib.NewNet4(net.ParseIP(address), networkString)
-	output := ipa.Wildcard().String()
-	return output
+	return fmt.Sprintf("%s", wildcard(net.IP(ipv4Net.Mask)))
+}
+
+// wildcard returns the opposite of the
+// the netmask for the network.
+func wildcard(mask net.IP) net.IP {
+	var ipVal net.IP
+	for _, octet := range mask {
+		ipVal = append(ipVal, ^octet)
+	}
+	return ipVal
 }

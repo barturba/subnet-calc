@@ -122,3 +122,22 @@ func TestSubnetMask(t *testing.T) {
 		})
 	}
 }
+
+func TestWildcardMask(t *testing.T) {
+	tests := map[string]struct {
+		address string
+		network string
+		want    string
+	}{
+		"179.241.4.46": {address: "179.241.4.46", network: "/30", want: "0.0.0.3"}}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := wildcardMask(tc.address, tc.network)
+			diff := cmp.Diff(tc.want, got)
+			if diff != "" {
+				t.Fatalf(diff)
+			}
+		})
+	}
+}
