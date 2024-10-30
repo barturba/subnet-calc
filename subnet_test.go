@@ -1,279 +1,198 @@
 package main
 
 import (
+	"bytes"
+	"io"
+	"os"
+	"strings"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
-func TestNetworkAddress(t *testing.T) {
+func TestParseNetwork(t *testing.T) {
 	tests := map[string]struct {
-		address string
-		network string
-		want    string
+		address    string
+		network    string
+		wantErr    bool
+		errMessage string
 	}{
-		"class_c_network": {
+		"valid_class_c": {
 			address: "192.168.1.1",
 			network: "/24",
-			want:    "192.168.1.0",
+			wantErr: false,
 		},
-		"small_subnet": {
-			address: "104.28.48.74",
-			network: "/30",
-			want:    "104.28.48.72",
+		"invalid_ip": {
+			address:    "300.168.1.1",
+			network:    "/24",
+			wantErr:    true,
+			errMessage: "invalid IP address",
 		},
-		"large_subnet": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    "10.0.0.0",
+		"invalid_network": {
+			address:    "192.168.1.1",
+			network:    "/33",
+			wantErr:    true,
+			errMessage: "invalid network mask",
 		},
-		"medium_subnet": {
-			address: "172.16.1.1",
-			network: "/16",
-			want:    "172.16.0.0",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := networkAddress(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
-			}
-		})
-	}
-}
-
-func TestUsableHostIPRange(t *testing.T) {
-	tests := map[string]struct {
-		address string
-		network string
-		want    string
-	}{
-		"tiny_network": {
-			address: "248.192.215.107",
-			network: "/30",
-			want:    "248.192.215.105 - 248.192.215.106",
-		},
-		"small_network": {
-			address: "38.73.20.159",
-			network: "/23",
-			want:    "38.73.20.1 - 38.73.21.254",
-		},
-		"medium_network": {
-			address: "179.241.4.46",
-			network: "/17",
-			want:    "179.241.0.1 - 179.241.127.254",
-		},
-		"large_network": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    "10.0.0.1 - 10.255.255.254",
+		"malformed_network": {
+			address:    "192.168.1.1",
+			network:    "abc",
+			wantErr:    true,
+			errMessage: "invalid network mask",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := usableHostIPRange(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
+			_, err := parseNetwork(tc.address, tc.network)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errMessage)
+				}
+				if !strings.Contains(err.Error(), tc.errMessage) {
+					t.Fatalf("expected error containing %q, got %q", tc.errMessage, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		})
 	}
 }
 
-func TestBroadcastAddress(t *testing.T) {
+func TestPrintNetworkAddress(t *testing.T) {
 	tests := map[string]struct {
 		address string
 		network string
-		want    string
+		wantOut string
+		wantErr bool
 	}{
 		"class_c": {
 			address: "192.168.1.1",
 			network: "/24",
-			want:    "192.168.1.255",
+			wantOut: `Network address: 192.168.1.0
+Usable host IP range: 192.168.1.1 - 192.168.1.254
+Broadcast address: 192.168.1.255
+Total number of hosts: 256
+Number of useable hosts: 254
+Subnet mask: 255.255.255.0
+Wildcard mask: 0.0.0.255
+`,
 		},
-		"small_subnet": {
-			address: "179.241.4.46",
-			network: "/30",
-			want:    "179.241.4.47",
-		},
-		"medium_subnet": {
-			address: "179.241.4.46",
-			network: "/17",
-			want:    "179.241.127.255",
-		},
-		"large_subnet": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    "10.255.255.255",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := broadcastAddress(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
-			}
-		})
-	}
-}
-
-func TestTotalNumberOfHosts(t *testing.T) {
-	tests := map[string]struct {
-		address string
-		network string
-		want    uint32
-	}{
 		"tiny_network": {
-			address: "179.241.4.46",
+			address: "10.0.0.1",
 			network: "/30",
-			want:    4,
+			wantOut: `Network address: 10.0.0.0
+Usable host IP range: 10.0.0.1 - 10.0.0.2
+Broadcast address: 10.0.0.3
+Total number of hosts: 4
+Number of useable hosts: 2
+Subnet mask: 255.255.255.252
+Wildcard mask: 0.0.0.3
+`,
 		},
-		"small_network": {
-			address: "192.168.1.1",
-			network: "/24",
-			want:    256,
-		},
-		"medium_network": {
-			address: "172.16.1.1",
-			network: "/16",
-			want:    65536,
-		},
-		"large_network": {
+		"class_a": {
 			address: "10.0.0.1",
 			network: "/8",
-			want:    16777216,
+			wantOut: `Network address: 10.0.0.0
+Usable host IP range: 10.0.0.1 - 10.255.255.254
+Broadcast address: 10.255.255.255
+Total number of hosts: 16777216
+Number of useable hosts: 16777214
+Subnet mask: 255.0.0.0
+Wildcard mask: 0.255.255.255
+`,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := totalNumberOfHosts(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
+			// Capture stdout
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			err := printNetworkAddress(tc.address, tc.network)
+
+			// Restore stdout
+			w.Close()
+			os.Stdout = oldStdout
+
+			// Read captured output
+			var buf bytes.Buffer
+			io.Copy(&buf, r)
+			got := buf.String()
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tc.wantOut {
+				t.Fatalf("got:\n%s\nwant:\n%s", got, tc.wantOut)
 			}
 		})
 	}
 }
 
-func TestNumberOfUsableHosts(t *testing.T) {
+func TestIPv4MaskString(t *testing.T) {
 	tests := map[string]struct {
-		address string
-		network string
-		want    uint32
+		input []byte
+		want  string
 	}{
-		"tiny_network": {
-			address: "179.241.4.46",
-			network: "/30",
-			want:    2,
+		"valid_24": {
+			input: []byte{255, 255, 255, 0},
+			want:  "255.255.255.0",
 		},
-		"small_network": {
-			address: "192.168.1.1",
-			network: "/24",
-			want:    254,
+		"valid_16": {
+			input: []byte{255, 255, 0, 0},
+			want:  "255.255.0.0",
 		},
-		"medium_network": {
-			address: "172.16.1.1",
-			network: "/16",
-			want:    65534,
-		},
-		"large_network": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    16777214,
+		"invalid_length": {
+			input: []byte{255, 255},
+			want:  "invalid mask",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := numberOfUsableHosts(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
+			got := ipv4MaskString(tc.input)
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
 	}
 }
 
-func TestSubnetMask(t *testing.T) {
+func TestWildcard(t *testing.T) {
 	tests := map[string]struct {
-		address string
-		network string
-		want    string
+		input []byte
+		want  string
 	}{
-		"30_bit_mask": {
-			address: "179.241.4.46",
-			network: "/30",
-			want:    "255.255.255.252",
+		"mask_24": {
+			input: []byte{255, 255, 255, 0},
+			want:  "0.0.0.255",
 		},
-		"24_bit_mask": {
-			address: "192.168.1.1",
-			network: "/24",
-			want:    "255.255.255.0",
+		"mask_16": {
+			input: []byte{255, 255, 0, 0},
+			want:  "0.0.255.255",
 		},
-		"16_bit_mask": {
-			address: "172.16.1.1",
-			network: "/16",
-			want:    "255.255.0.0",
-		},
-		"8_bit_mask": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    "255.0.0.0",
+		"mask_8": {
+			input: []byte{255, 0, 0, 0},
+			want:  "0.255.255.255",
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := subnetMask(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
-			}
-		})
-	}
-}
-
-func TestWildcardMask(t *testing.T) {
-	tests := map[string]struct {
-		address string
-		network string
-		want    string
-	}{
-		"30_bit_mask": {
-			address: "179.241.4.46",
-			network: "/30",
-			want:    "0.0.0.3",
-		},
-		"24_bit_mask": {
-			address: "192.168.1.1",
-			network: "/24",
-			want:    "0.0.0.255",
-		},
-		"16_bit_mask": {
-			address: "172.16.1.1",
-			network: "/16",
-			want:    "0.0.255.255",
-		},
-		"8_bit_mask": {
-			address: "10.0.0.1",
-			network: "/8",
-			want:    "0.255.255.255",
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := wildcardMask(tc.address, tc.network)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatalf(diff)
+			got := wildcard(tc.input)
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
 	}
