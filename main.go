@@ -116,7 +116,7 @@ func wildcardMask(address, network string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return fmt.Sprintf("%s", wildcard(net.IP(ipv4Net.Mask)))
+	return wildcard(net.IP(ipv4Net.Mask)).String()
 }
 
 // wildcard returns the opposite of the
